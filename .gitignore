@@ -3,6 +3,7 @@
 /tmp
 /results
 mp16_places365.csv
+Images/
 *.json
 !cfg_ex.json
 
@@ -117,3 +118,5 @@ venv.bak/
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+/AHB_download_img/Images/
