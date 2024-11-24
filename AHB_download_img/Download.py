@@ -2,10 +2,11 @@ import requests
 import piexif
 import pandas as pd
 import os
+import pickle
 from tqdm import tqdm
 
 
-imgs_file = "C:/Users/August/PycharmProjects/GeoEstimation/resources/mp16_urls.csv"
+imgs_file = "mp16_urls.csv"
 
 #imgs_file = "C:/Users/August/PycharmProjects/GeoEstimation/resources/yfcc25600_urls.csv"
 df = pd.read_csv(imgs_file)
@@ -24,15 +25,16 @@ df.columns = ['Name', 'img']
 
 i = 0
 for (img, name) in tqdm(zip(df['img'], df['Name']), total= 50000): # len(df['img'])):
-    if i == 50000:
+    if i > 100:
         break
-
+    i += 1
     try:
         get_img(img, name)
-        i += 1
     except:
         failed_indexes.append(name.replace('/', '_'))
 
 
+with open(f'Failed_indexes', 'wb') as file:
+    pickle.dump(failed_indexes, file)
 
 

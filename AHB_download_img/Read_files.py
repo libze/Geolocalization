@@ -1,6 +1,5 @@
 import os
 import pandas as pd
-from geopy.geocoders import Nominatim
 import geocoder
 import pickle
 from tqdm import tqdm
