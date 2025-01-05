@@ -21,11 +21,11 @@ torch.manual_seed(seed)
 
 dtu_path = "/dtu/blackhole/05/146725/shards/shards/"
 path = "AHB_download_img/Features"
-server = False
+server = True
 amount_path = 10000000033
 bar_chart_amount = 212
 verbose = False
-num_classes = 221
+num_classes = 2
 
 num_epochs = 40  # Set the number of epochs for training
 
@@ -121,6 +121,13 @@ for label_block in labels:
     for label in label_block:
         labels_test.append(label.numpy() if isinstance(label, torch.Tensor) else label)
 
+bin_label = []
+for label in labels_test:
+    if label == 9:
+        bin_label.append(1)
+    else:
+        bin_label.append(0)
+
 
 for id_block in ids:
     for id in id_block:
@@ -129,7 +136,7 @@ for id_block in ids:
 
 # Convert to tensors
 features = torch.tensor(np.array(features_test), dtype=torch.float32)
-labels = torch.tensor(np.array(labels_test), dtype=torch.int64)
+labels = torch.tensor(np.array(bin_label), dtype=torch.int64)
 ids = torch.tensor(range(len(features)), dtype=torch.int64)
 
 
@@ -226,9 +233,9 @@ for epoch in range(num_epochs):
                 country_correct[target.item()] += 1
 
         # Get top-5 accuracy
-        top5_values, top5_indices = torch.topk(outputs, 5, dim=1)
-        correct_in_top5 = torch.any(top5_indices == targets.unsqueeze(1), dim=1).sum().item()
-        running_acc_top5 += correct_in_top5
+        #top5_values, top5_indices = torch.topk(outputs, 5, dim=1)
+        #correct_in_top5 = torch.any(top5_indices == targets.unsqueeze(1), dim=1).sum().item()
+        #running_acc_top5 += correct_in_top5
 
         # Update epoch statistics
         running_acc_train += (predicted_train == targets).sum().item()
@@ -237,7 +244,7 @@ for epoch in range(num_epochs):
 
     # Epoch statistics
     training_info.append([epoch + 1, running_acc_train / inputs_in_epoch * 100])
-    training_info_top5.append([epoch + 1, running_acc_top5 / inputs_in_epoch * 100])
+    #training_info_top5.append([epoch + 1, running_acc_top5 / inputs_in_epoch * 100])
     training_info_loss.append([epoch + 1, sum_loss/ inputs_in_epoch])
 
     with torch.no_grad():
@@ -258,15 +265,15 @@ for epoch in range(num_epochs):
             total_correct_top1 += (predicted == targets_val).sum().item()
 
             # Top-5 accuracy
-            top5_values, top5_indices = torch.topk(outputs_val, 5, dim=1)
-            total_correct_top5 += torch.any(top5_indices == targets_val.unsqueeze(1), dim=1).sum().item()
+            #top5_values, top5_indices = torch.topk(outputs_val, 5, dim=1)
+            #total_correct_top5 += torch.any(top5_indices == targets_val.unsqueeze(1), dim=1).sum().item()
 
             # Count total samples
             total_samples_val += targets_val.size(0)
 
         # Compute metrics
         running_acc_val = total_correct_top1 / total_samples_val * 100
-        running_acc_top5_val = total_correct_top5 / total_samples_val * 100
+        #running_acc_top5_val = total_correct_top5 / total_samples_val * 100
         running_loss = running_loss / total_samples_val
 
         # Track the best model
@@ -278,7 +285,7 @@ for epoch in range(num_epochs):
 
         # Log results
         val_info.append([epoch + 1, running_acc_val])
-        val_info_top5.append([epoch + 1, running_acc_top5_val])
+        #val_info_top5.append([epoch + 1, running_acc_top5_val])
         val_info_loss.append([epoch + 1, running_loss])
 
 torch.save(best_model.state_dict(), f"model_weights_all_data_learningrate_{0.00001}_{seed}_{num_epochs}.pth")
@@ -386,7 +393,7 @@ plot_graph(
     filename=f'trainVsVal_loss_{amount_path * 10000}_learningrate_{lr}_{seed}_{num_epochs}_Xavierini.png' if server else None,
     server=server
 )
-
+"""
 # Plot Training vs Validation Top-5 Accuracy
 y_train_top5 = [train_info_element[1] for train_info_element in training_info_top5]
 y_val_top5 = [val_info_element[1] for val_info_element in val_info_top5]
@@ -561,4 +568,4 @@ if not server:
     print("Top 10 Losses:", top_10)
 
 
-
+"""
