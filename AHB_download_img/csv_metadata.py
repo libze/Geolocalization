@@ -11,14 +11,27 @@ from io import BytesIO
 from pathlib import Path
 from geopy.geocoders import Nominatim
 import csv
-import json
+import geopandas as gpd
+from shapely.geometry import Point
 
 
 path = ".\\Data_test2\\"
-DTU_BLACKHOLE = "/dtu/blackhole/05/146725/shards/"
-
+DTU_BLACKHOLE = "/dtu/blackhole/05/146725/shards/shards/"
+#path = DTU_BLACKHOLE
 save_path = DTU_BLACKHOLE + "/mp16/" #Path where images are stored.
 
+file_path = "ne_110m_admin_0_countries/ne_110m_admin_0_countries.shp"
+world = gpd.read_file(file_path)
+
+def get_country(lat, lon):
+    # Create a point geometry
+    point = Point(lon, lat)  # Note: lon comes before lat
+    # Find the country containing the point
+    for i, country in world.iterrows():
+        if country['geometry'].contains(point):
+            return country['ADMIN']  # Replace 'ADMIN' with the relevant column for country names
+
+    return get_country_from_latlon(lat,lon)
 
 def get_country_from_latlon(lat, lon, city=False):
     # Initialize Nominatim API
@@ -32,7 +45,7 @@ def get_country_from_latlon(lat, lon, city=False):
 
     if city:
         city = address.get('city', None)
-        return country, city, address
+        return country  # , city, address
 
     return country
 
@@ -43,12 +56,17 @@ def remeber_img(new_img):
         file.write(new_img + "\n")
 
 
+def append_csv(data, file):
+    with open(file, mode='a', newline='', encoding='utf-8') as file:
+        writer = csv.writer(file)
+        writer.writerow(data)
+
 #get_country_from_latlon(55.676098, 12.568337)
 
-def save_imgs_from_shards(shard_path, save_path, n=5):
+def save_imgs_from_shards(shard_path, save_path, n=100, testing = False):
     count = 0
-    new_loaded_imgs = set()
     loaded_imgs = set()
+
 
     # Open the file and read it line by line
     with open('loaded_imgs.txt', 'r') as file:
@@ -58,19 +76,19 @@ def save_imgs_from_shards(shard_path, save_path, n=5):
 
     failed_imgs = []
     data_all_shards = []
-    for shard in os.listdir(path):
+    for shard in os.listdir(shard_path):
         count2 = 0
         images = []
-        data_per_shard = []
         count += 1
         if count == 5: break
         with open(path + shard, "rb") as infile:
-            for i, record in tqdm(enumerate(msgpack.Unpacker(infile, raw=False)), total = n):
+            for i, record in tqdm(enumerate(msgpack.Unpacker(infile, raw=False)), total=n):
                 count2 += 1
                 try:
                     if record['id'] in loaded_imgs: continue
                     lat, lon = record["latitude"], record["longitude"]
-                    country, city, loc_dict = get_country_from_latlon(lat, lon, city=True)
+                    country = get_country(lat, lon)
+
                     image = Image.open(BytesIO(record["image"]))
                     images.append(image)
 
@@ -81,41 +99,33 @@ def save_imgs_from_shards(shard_path, save_path, n=5):
 
                     Path(save_path, mkpath).mkdir(parents=True, exist_ok=True)
                     image.save(Path(save_path, mkpath, name))
-                    data_per_shard.append([record['id'], lat, lon, country, city, loc_dict, str(Path(save_path, mkpath, name))])
-                    remeber_img(record['id'])
+                    remeber_img(record['id']), append_csv([record['id'], lat, lon, country, str(Path(save_path, mkpath, name))], "csv's/first_test.csv")
+
 
                 except:
                     failed_imgs.append([record['id'], (record['latitude'], record['latitude'])])
+                if testing:
+                    if count2 > n:
+                        break
 
-                if count2 > n:
-                    break
-
-            data_all_shards.append(data_per_shard)
 
     with open('failed_imgs', "wb") as file:
         pickle.dump(failed_imgs, file)
 
     print("Amount of failed imgs:", len(failed_imgs))
     print("Done")
-    print(len(data_all_shards), print(len(data_all_shards[0])))
+    #print(len(data_all_shards), print(len(data_all_shards[0])))
 
     return data_all_shards
 
-data_all_shards = save_imgs_from_shards(path, save_path)
+save_imgs_from_shards(path, save_path, testing=True)
 
 #testing
-print(data_all_shards)
+#print(data_all_shards)
 
 # Create csv
-def create_csv(data, path, name):
-    os.makedirs(path, exist_ok=True)
-    with open(path + "/" + name, mode = "w", newline="") as file:
-        writer = csv.writer(file)
 
-        for item in data:
-            writer.writerow([json.dumps(item)])
-
-
-    print("CSV file created")
-
-create_csv(data_all_shards, "csv's", "first_test.csv")
+#check list
+# testing = False
+#break count = 5
+#path = DTU_BLACKHOLE
